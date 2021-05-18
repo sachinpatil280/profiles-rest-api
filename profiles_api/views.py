@@ -6,6 +6,7 @@ from rest_framework.authentication import TokenAuthentication
 from rest_framework import filters
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.settings import api_settings
+from rest_framework.permissions import IsAuthenticated
 
 from profiles_api import models
 from profiles_api import serializers
@@ -33,7 +34,7 @@ class HelloApiView(APIView):
         if serializer.is_valid():
             name = serializer.validated_data.get('name')
             message = f'Hello {name}'
-            return Response({'message: message'})
+            return Response({'message': message})
         else:
             return Response(
                 serializer.errors,
@@ -110,6 +111,21 @@ class UserProfileViewSet(viewsets.ModelViewSet):
     filter_backends = (filters.SearchFilter,)
     search_fields = ('name', 'email',)
 
+
 class UserLoginAPIView(ObtainAuthToken):
     """Handle Creating User Auth Tokens"""
     renderer_classes = api_settings.DEFAULT_RENDERER_CLASSES
+
+
+class UserProfileFeelViewSet(viewsets.ModelViewSet):
+    """Handles reading creating and updating Profile Feed Items"""
+    authentication_classes = (TokenAuthentication,)
+    serializer_class = serializers.ProfileFeelItemSerializer
+    queryset = models.ProfileFeedItem.objects.all()
+    permission_classes = (
+        permissions.UpdateOwnStatus,
+        IsAuthenticated
+    )
+    def perform_create(self, serializer):
+        """Sets the user profile to logged in user"""
+        serializer.save(user_profile=self.request.user)
